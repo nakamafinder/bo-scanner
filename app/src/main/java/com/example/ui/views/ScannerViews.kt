@@ -240,13 +240,13 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Scanner,
-                                contentDescription = "LensPro Logo",
+                                contentDescription = "BO Scanner Logo",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(32.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "LensPro",
+                                text = "BO Scanner",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -288,6 +288,7 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
                                     AppLanguage.SPANISH -> "ES"
                                     AppLanguage.FRENCH -> "FR"
                                     AppLanguage.JAPANESE -> "JP"
+                                    AppLanguage.INDONESIAN -> "ID"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -1923,8 +1924,8 @@ fun triggerSystemShare(context: Context, file: File, docTitle: String, mimeType:
 
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mimeType
-            putExtra(Intent.EXTRA_SUBJECT, "LensPro OCR Export: $docTitle")
-            putExtra(Intent.EXTRA_TEXT, "Sending Encrypted Scanned Document: $docTitle via LensPro OCR.")
+            putExtra(Intent.EXTRA_SUBJECT, "BO Scanner OCR Export: $docTitle")
+            putExtra(Intent.EXTRA_TEXT, "Sending Encrypted Scanned Document: $docTitle via BO Scanner OCR.")
             putExtra(Intent.EXTRA_STREAM, contentUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -1998,7 +1999,7 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
                 // Clean minimalist premium header
                 Column {
                     Text(
-                        text = "LensPro Converter Hub",
+                        text = "BO Scanner Converter Hub",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -2088,7 +2089,7 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
                             ) {
                                 Icon(Icons.Default.FolderOpen, contentDescription = "Select active scan")
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pick LensPro Scan", fontSize = 12.sp, maxLines = 1)
+                                Text("Pick BO Scanner Scan", fontSize = 12.sp, maxLines = 1)
                             }
 
                             OutlinedButton(
@@ -2138,7 +2139,7 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
                                         maxLines = 1
                                     )
                                     Text(
-                                        text = if (selectedDocId != null) "Linked to LensPro Database Document" else "Simulated uploaded custom file",
+                                        text = if (selectedDocId != null) "Linked to BO Scanner Database Document" else "Simulated uploaded custom file",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                     )

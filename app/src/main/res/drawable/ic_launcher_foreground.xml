@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_scanner_logo_1779435576141"
+        android:drawable="@drawable/bo_scanner_icon_1779438167601"
         android:gravity="center" />
 </layer-list>

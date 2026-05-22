@@ -22,7 +22,7 @@ sealed interface AppScreen {
 }
 
 enum class AppLanguage {
-    ENGLISH, SPANISH, FRENCH, JAPANESE
+    ENGLISH, SPANISH, FRENCH, JAPANESE, INDONESIAN
 }
 
 class ScannerViewModel(private val repository: DocumentRepository) : ViewModel() {
@@ -135,6 +135,31 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
                 "word_export" -> "Wordエクスポート"
                 "view_file" -> "抽出されたテキスト"
                 "copied" -> "クリップボードにコピーしました！"
+                else -> key
+            }
+            AppLanguage.INDONESIAN -> when (key) {
+                "dashboard" -> "Dasbor Pemindai"
+                "folders" -> "Folder"
+                "all_docs" -> "Semua Dokumen"
+                "unsorted" -> "Tanpa Folder"
+                "search_scans" -> "Cari hasil pemindaian..."
+                "e2e_badge" -> "Terenkripsi E2E"
+                "offline_badge" -> "Mode Luring"
+                "no_docs" -> "Tidak ada dokumen terpindai."
+                "new_scan" -> "Pindai Baru"
+                "sync_active" -> "Sinkronisasi Cloud Aktif"
+                "analytics" -> "Ruang & Penggunaan Pemindai"
+                "doc_count" -> "Dokumen Tersimpan"
+                "batch_mode" -> "Mode Pemindaian Massal"
+                "corners_title" -> "Edit Perspektif & Potong"
+                "save_doc" -> "Simpan Dokumen"
+                "processing" -> "Ekstraksi Teks OCR..."
+                "tags" -> "Tag Kustom"
+                "security_title" -> "Keamanan & Brankas Sinkronisasi"
+                "pdf_export" -> "Ekspor ke PDF"
+                "word_export" -> "Ekspor ke Word"
+                "view_file" -> "Teks Hasil OCR"
+                "copied" -> "Tersalin ke papan klip!"
                 else -> key
             }
             else -> when (key) {
@@ -636,8 +661,8 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
         mapOf(
             // Seed a few beautiful default professional contacts
             0 to listOf(
-                SharedUser("alex.rivera@lenspro-teams.com", "CO-WRITER", "A"),
-                SharedUser("s.chen@lenspro-teams.com", "VIEWER & COMMENTS", "S")
+                SharedUser("alex.rivera@boscanner-teams.com", "CO-WRITER", "A"),
+                SharedUser("s.chen@boscanner-teams.com", "VIEWER & COMMENTS", "S")
             )
         )
     )
@@ -819,7 +844,7 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
                 sourceFormat = "PDF",
                 targetFormat = "Word (DOCX)",
                 fileSize = "1.2 MB",
-                textPreview = "LENSPRO OCR RECONSTRUCTED DOCUMENT\n" +
+                textPreview = "BO SCANNER OCR RECONSTRUCTED DOCUMENT\n" +
                               "INVOICE #7721\n" +
                               "Date: May 20, 2026\n" +
                               "Total Due: \$1,240.00 USD\n" +
@@ -832,7 +857,7 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
                 sourceFormat = "Word (DOC)",
                 targetFormat = "PDF Document",
                 fileSize = "430 KB",
-                textPreview = "[Page 1 Header: LensPro PDF Synthesizer]\n" +
+                textPreview = "[Page 1 Header: BO Scanner PDF Synthesizer]\n" +
                               "BUSINESS PROJECT ANNUAL REPORT 2026\n" +
                               "This is a high-fidelity PDF render containing formatted typography blocks, margins set at 1.0 inch, and aligned paragraph spacing."
             )
@@ -851,12 +876,12 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
             _isConverting.value = true
             _conversionProgress.value = 0.0f
             _conversionLogs.value = listOf(
-                "Initializing LensPro Converter Core Engine...",
+                "Initializing BO Scanner Converter Core Engine...",
                 "Reading binary structure of '$sourceFileName'..."
             )
             
             val logsList = mutableListOf(
-                "Initializing LensPro Converter Core Engine...",
+                "Initializing BO Scanner Converter Core Engine...",
                 "Reading binary structure of '$sourceFileName'..."
             )
 
@@ -881,7 +906,7 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
             // If linked to a database document, extract real text!
             var extractedContent = ""
             if (sourceDocumentId != null) {
-                logsList.add("Fetching real OCR data from LensPro Encrypted SQLite database...")
+                logsList.add("Fetching real OCR data from BO Scanner Encrypted SQLite database...")
                 val docPages = repository.getPagesForDocument(sourceDocumentId).firstOrNull() ?: emptyList()
                 extractedContent = docPages.joinToString("\n\n") { it.ocrText }
             }
@@ -928,11 +953,11 @@ class ScannerViewModel(private val repository: DocumentRepository) : ViewModel()
                     else -> "140 KB"
                 },
                 textPreview = if (targetType.contains("PDF", ignoreCase = true)) {
-                    "[LENSPRO HIGH-FIDELITY PDF GRAPHICS LAYER]\n\n$extractedContent"
+                    "[BO SCANNER HIGH-FIDELITY PDF GRAPHICS LAYER]\n\n$extractedContent"
                 } else if (targetType.contains("Word", ignoreCase = true)) {
-                    "[LENSPRO WORD LAYOUT ALIGNER]\n\nType: Word Document (DOCX)\n\n$extractedContent"
+                    "[BO SCANNER WORD LAYOUT ALIGNER]\n\nType: Word Document (DOCX)\n\n$extractedContent"
                 } else {
-                    "[LENSPRO SPREADSHEET REPRESENTATION]\n\n$extractedContent"
+                    "[BO SCANNER SPREADSHEET REPRESENTATION]\n\n$extractedContent"
                 }
             )
 

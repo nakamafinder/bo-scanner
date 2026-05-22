@@ -1,5 +1,5 @@
 {
-  "name": "LensPro OCR",
+  "name": "BO Scanner App",
   "description": "Professional E2E encrypted document scanner with perspective correction, batch OCR, folders management, and PDF/Word export.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
