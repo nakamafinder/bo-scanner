@@ -221,13 +221,19 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 760.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Header Block: Logo & Unified Search & Language Settings
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -646,6 +652,7 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
             }
         }
     }
+}
 
     // Modal dialog to add dynamic folders in Local Database
     if (showAddFolderDialog) {
@@ -710,6 +717,18 @@ fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) 
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Elegant document thumbnail proxy containing file format symbol
+            val documentIcon = remember(doc.title) {
+                val titleLower = doc.title.lowercase()
+                when {
+                    titleLower.contains("receipt") || titleLower.contains("struk") -> Icons.Default.Receipt
+                    titleLower.contains("invoice") || titleLower.contains("tagihan") || titleLower.contains("faktur") -> Icons.Default.ReceiptLong
+                    titleLower.contains("card") || titleLower.contains("kartu") -> Icons.Default.AccountBox
+                    titleLower.contains("book") || titleLower.contains("buku") -> Icons.Default.Book
+                    titleLower.contains("report") || titleLower.contains("laporan") -> Icons.Default.Assessment
+                    else -> Icons.Default.Description
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -717,7 +736,7 @@ fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) 
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Description,
+                    imageVector = documentIcon,
                     contentDescription = "Doc format icon",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
@@ -869,13 +888,19 @@ fun ScannerViewfinderScreen(viewModel: ScannerViewModel) {
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(Color.Black),
-            horizontalAlignment = Alignment.CenterHorizontally
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 600.dp)
+                    .padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             // Live scanning viewfinder canvas simulator
             Box(
                 modifier = Modifier
@@ -1135,6 +1160,7 @@ fun ScannerViewfinderScreen(viewModel: ScannerViewModel) {
             }
         }
     }
+}
 
     // Reset snap background burst effect gracefully after flash
     LaunchedEffect(captureSuccessOverlay) {
@@ -1194,14 +1220,20 @@ fun CropAndFilterEditorScreen(viewModel: ScannerViewModel) {
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 680.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Interactive Drag Perspective crop view container
             Text(
                 text = "Simulating automatic edge detection. Drag highlighted corner coordinates manually to tweak perspective bounds:",
@@ -1485,6 +1517,7 @@ fun CropAndFilterEditorScreen(viewModel: ScannerViewModel) {
         }
     }
 }
+}
 
 // ==========================================
 // 4. DOCUMENT DETAILS SCAN READS SCREEN
@@ -1559,14 +1592,20 @@ fun DocumentDetailsScreen(viewModel: ScannerViewModel, docId: Int) {
         } else {
             val activePage = pages.getOrNull(activePageIndex)
 
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.TopCenter
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 680.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Swipe index slideshow page tags
                 if (pages.size > 1) {
                     Row(
@@ -1715,6 +1754,7 @@ fun DocumentDetailsScreen(viewModel: ScannerViewModel, docId: Int) {
         }
     }
 }
+}
 
 // ==========================================
 // 5. SECURITY & SYNC VAULT CONFIG SCREEN
@@ -1753,14 +1793,20 @@ fun SecurityVaultScreen(viewModel: ScannerViewModel) {
             }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 680.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -1906,6 +1952,7 @@ fun SecurityVaultScreen(viewModel: ScannerViewModel) {
         }
     }
 }
+}
 
 // ==========================================
 // 6. SHARED UTILITIES
@@ -1987,13 +2034,19 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 760.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 // Clean minimalist premium header
@@ -2407,6 +2460,7 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
             }
         }
     }
+}
 
     // Modal Document Picker for Real scan file integration!
     if (showDocSelectorDialog) {
