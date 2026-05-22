@@ -207,7 +207,7 @@ class DocumentRepository(private val documentDao: DocumentDao, private val conte
                     isFakeBoldText = true
                     color = android.graphics.Color.DKGRAY
                 }
-                canvas.drawText("CAMSCANNER PRO EXPORT - PAGE ${index + 1}", 40f, 65f, titlePaint)
+                canvas.drawText("BO SCANNER EXPORT - PAGE ${index + 1}", 40f, 65f, titlePaint)
                 canvas.drawText("Document: $title", 40f, 85f, paint)
                 
                 var yOffset = 120f
@@ -233,7 +233,7 @@ class DocumentRepository(private val documentDao: DocumentDao, private val conte
         stream.use { out ->
             val builder = StringBuilder()
             builder.append("========================================\n")
-            builder.append("CAMSCANNER PRO DOCUMENT REPORT\n")
+            builder.append("BO SCANNER DOCUMENT REPORT\n")
             builder.append("Document: $title\n")
             builder.append("Export Format: Word / Plaintext Doc (OCR Searchable)\n")
             builder.append("========================================\n\n")
