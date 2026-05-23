@@ -55,8 +55,11 @@ import com.example.ui.viewmodel.AppScreen
 import com.example.ui.viewmodel.ScannerViewModel
 import com.example.ui.viewmodel.ConvertedFile
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,6 +154,8 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
     val folders by viewModel.folders.collectAsState()
     val documents by viewModel.documents.collectAsState()
     val syncEnabled by viewModel.syncEnabled.collectAsState()
+    val homeBatchSelectActive by viewModel.homeBatchSelectActive.collectAsState()
+    val selectedDocumentIds by viewModel.selectedDocumentIds.collectAsState()
 
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var folderNameInput by remember { mutableStateOf("") }
@@ -196,27 +201,29 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    viewModel.clearScanningSession()
-                    viewModel.navigateTo(AppScreen.Scanner)
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .testTag("new_scan_fab")
-                    .padding(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            if (!homeBatchSelectActive) {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.clearScanningSession()
+                        viewModel.navigateTo(AppScreen.Scanner)
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .testTag("new_scan_fab")
+                        .padding(8.dp)
                 ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = "Scan icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = viewModel.translate("new_scan"),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = "Scan icon")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = viewModel.translate("new_scan"),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -605,12 +612,40 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
 
             // Documents List header section
             item {
-                Text(
-                    text = viewModel.translate("doc_count") + " (${documents.size})",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = viewModel.translate("doc_count") + " (${documents.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    
+                    TextButton(
+                        onClick = { viewModel.toggleHomeBatchSelect() },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (homeBatchSelectActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier.testTag("toggle_batch_select_btn")
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (homeBatchSelectActive) Icons.Default.SelectAll else Icons.Default.LibraryAddCheck,
+                                contentDescription = "Batch mode selection",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (homeBatchSelectActive) "Cancel Batch" else "Batch Lab",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
 
             // Map list of Room Scanned Documents or empty placeholder
@@ -640,15 +675,218 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
                 }
             } else {
                 items(documents) { doc ->
-                    DocumentCardItem(doc = doc, folders = folders, onClick = {
-                        viewModel.navigateTo(AppScreen.Details(doc.id))
-                    })
+                    val isSelected = selectedDocumentIds.contains(doc.id)
+                    DocumentCardItem(
+                        doc = doc,
+                        folders = folders,
+                        onClick = {
+                            viewModel.navigateTo(AppScreen.Details(doc.id))
+                        },
+                        selectionModeActive = homeBatchSelectActive,
+                        selected = isSelected,
+                        onSelectToggle = {
+                            viewModel.toggleDocumentSelection(doc.id)
+                        }
+                    )
                 }
             }
 
             // Spacing buffer bottom
             item {
                 Spacer(modifier = Modifier.height(80.dp))
+            }
+        }
+
+        // --- Floating Batch Panel Overlay inside Box ---
+        if (homeBatchSelectActive) {
+            var showFilterMenu by remember { mutableStateOf(false) }
+            var showOcrMenu by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp, start = 12.dp, end = 12.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 700.dp)
+                        .testTag("batch_operation_bar"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${selectedDocumentIds.size}",
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Batch Selected Scans",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { viewModel.clearDocumentSelection() },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                            ) {
+                                Text("Clear Selection", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Actions Row (Filters, OCR, Export PDF, Export Word, Delete)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 1. Filter toggle button
+                            IconButtonWithLabel(
+                                icon = Icons.Default.FilterBAndW,
+                                label = "Bulk Filter",
+                                onClick = { 
+                                    showFilterMenu = !showFilterMenu
+                                    showOcrMenu = false
+                                },
+                                tint = MaterialTheme.colorScheme.secondary,
+                                enabled = selectedDocumentIds.isNotEmpty()
+                            )
+
+                            // 2. OCR re-process button
+                            IconButtonWithLabel(
+                                icon = Icons.Default.Translate,
+                                label = "Bulk OCR",
+                                onClick = { 
+                                    showOcrMenu = !showOcrMenu
+                                    showFilterMenu = false
+                                },
+                                tint = MaterialTheme.colorScheme.primary,
+                                enabled = selectedDocumentIds.isNotEmpty()
+                            )
+
+                            // 3. Combined PDF Export button
+                            IconButtonWithLabel(
+                                icon = Icons.Default.PictureAsPdf,
+                                label = "Batch PDF",
+                                onClick = {
+                                    scope.launch {
+                                        val file = viewModel.bulkExportPdf()
+                                        if (file != null) {
+                                            triggerSystemShare(context, file, "Combined Batch Scan PDF", "application/pdf")
+                                        }
+                                    }
+                                },
+                                tint = Color(0xFFD32F2F),
+                                enabled = selectedDocumentIds.isNotEmpty()
+                            )
+
+                            // 4. Combined Word Export button
+                            IconButtonWithLabel(
+                                icon = Icons.Default.Article,
+                                label = "Batch Word",
+                                onClick = {
+                                    scope.launch {
+                                        val file = viewModel.bulkExportWord()
+                                        if (file != null) {
+                                            triggerSystemShare(context, file, "Combined Batch Scan Word", "application/msword")
+                                        }
+                                    }
+                                },
+                                tint = Color(0xFF1976D2),
+                                enabled = selectedDocumentIds.isNotEmpty()
+                            )
+
+                            // 5. Bulk Delete
+                            IconButtonWithLabel(
+                                icon = Icons.Default.DeleteSweep,
+                                label = "Delete Bulk",
+                                onClick = { viewModel.bulkDeleteSelected() },
+                                tint = MaterialTheme.colorScheme.error,
+                                enabled = selectedDocumentIds.isNotEmpty()
+                            )
+                        }
+
+                        // Submenus with nice smooth reveals
+                        if (showFilterMenu && selectedDocumentIds.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Apply Bulk Color Filter to selected docs:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val filters = listOf("ORIGINAL", "GRAYSCALE", "MONOCHROME", "MAGIC")
+                                filters.forEach { f ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = {
+                                            viewModel.bulkApplyFilterToSelected(f)
+                                            showFilterMenu = false
+                                        },
+                                        label = { Text(f, fontSize = 10.sp) }
+                                    )
+                                }
+                            }
+                        }
+
+                        if (showOcrMenu && selectedDocumentIds.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Reprocess Batch OCR structure presets:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val ocrPresets = listOf(
+                                    Pair("STANDARD", "Standard Text"),
+                                    Pair("FORM_ALIGNMENT", "Structured Form"),
+                                    Pair("RECEIPTS_TABULAR", "Tabular Grid"),
+                                    Pair("HISTORICAL_MANUSCRIPT", "Manuscript Ink")
+                                )
+                                ocrPresets.forEach { p ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = {
+                                            viewModel.bulkOcrPresetSelected(p.first)
+                                            showOcrMenu = false
+                                        },
+                                        label = { Text(p.second, fontSize = 10.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -691,7 +929,14 @@ fun DashboardHomeScreen(viewModel: ScannerViewModel) {
 }
 
 @Composable
-fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) {
+fun DocumentCardItem(
+    doc: Document,
+    folders: List<Folder>,
+    onClick: () -> Unit,
+    selectionModeActive: Boolean = false,
+    selected: Boolean = false,
+    onSelectToggle: () -> Unit = {}
+) {
     val matchingFolder = folders.find { it.id == doc.folderId }?.name ?: "Root"
     val formattedDate = remember(doc.timestamp) {
         val date = java.util.Date(doc.timestamp)
@@ -702,13 +947,23 @@ fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { 
+                if (selectionModeActive) {
+                    onSelectToggle()
+                } else {
+                    onClick()
+                }
+            }
             .testTag("document_card_${doc.id}"),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        border = BorderStroke(
+            width = if (selected) 2.dp else 0.5.dp,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -716,6 +971,18 @@ fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) 
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (selectionModeActive) {
+                Icon(
+                    imageVector = if (selected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = "Select status",
+                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { onSelectToggle() }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
             // Elegant document thumbnail proxy containing file format symbol
             val documentIcon = remember(doc.title) {
                 val titleLower = doc.title.lowercase()
@@ -806,12 +1073,14 @@ fun DocumentCardItem(doc: Document, folders: List<Folder>, onClick: () -> Unit) 
             }
 
             Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "See Detail",
-                tint = Color.Gray,
-                modifier = Modifier.size(24.dp)
-            )
+            if (!selectionModeActive) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "See Detail",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -1372,6 +1641,103 @@ fun CropAndFilterEditorScreen(viewModel: ScannerViewModel) {
                 }
             }
 
+            // --- NEW: Batch Pages Queue horizontal scroll switcher ---
+            if (scannedPages.size > 1) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Batch Pages Queue (${scannedPages.size} pages - Tap to edit crop/corners):",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("batch_session_pages_carousel")
+                            .padding(vertical = 4.dp)
+                    ) {
+                        itemsIndexed(scannedPages) { index, pair ->
+                            val isEditingThis = index == editingIdx
+                            val label = pair.first
+                            
+                            Card(
+                                onClick = { viewModel.setEditingPageIndex(index) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isEditingThis) MaterialTheme.colorScheme.primaryContainer 
+                                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    width = if (isEditingThis) 2.dp else 1.dp,
+                                    color = if (isEditingThis) MaterialTheme.colorScheme.primary else Color.LightGray.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.width(135.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(
+                                                if (isEditingThis) MaterialTheme.colorScheme.primary 
+                                                else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${index + 1}",
+                                            color = if (isEditingThis) MaterialTheme.colorScheme.onPrimary 
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    
+                                    Text(
+                                        text = label,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.removeCapturedPage(index)
+                                            var nextEditIdx = editingIdx
+                                            if (nextEditIdx >= scannedPages.size) {
+                                                nextEditIdx = (scannedPages.size - 1).coerceAtLeast(0)
+                                            }
+                                            viewModel.setEditingPageIndex(nextEditIdx)
+                                        },
+                                        contentPadding = PaddingValues(0.dp),
+                                        modifier = Modifier.height(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Remove page",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Discard", fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Document Enhancement Filters Picker Row
             Column {
                 Text(
@@ -1427,6 +1793,24 @@ fun CropAndFilterEditorScreen(viewModel: ScannerViewModel) {
                                     color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                        }
+                    }
+                }
+
+                if (scannedPages.size > 1) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.bulkApplyFilterToSession(currentFilter)
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("apply_filter_to_all_pages_btn"),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DoneAll, contentDescription = "Apply to all", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Apply '$currentFilter' filter to ALL pages in batch", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2551,6 +2935,47 @@ fun FileConverterScreen(viewModel: ScannerViewModel) {
                     Text("Close Preview")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun IconButtonWithLabel(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    tint: Color,
+    enabled: Boolean = true
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .clickable(enabled = enabled) { onClick() }
+            .padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(
+                    if (enabled) tint.copy(alpha = 0.12f) else Color.Gray.copy(alpha = 0.1f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (enabled) tint else Color.Gray.copy(alpha = 0.5f),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else Color.Gray.copy(alpha = 0.6f)
         )
     }
 }

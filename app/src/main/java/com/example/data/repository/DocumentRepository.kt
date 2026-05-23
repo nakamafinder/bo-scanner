@@ -60,14 +60,16 @@ class DocumentRepository(private val documentDao: DocumentDao, private val conte
         pageNum: Int, 
         preset: String, 
         ocrText: String, 
-        corners: String = "0.05,0.05,0.95,0.08,0.92,0.95,0.08,0.92"
+        corners: String = "0.05,0.05,0.95,0.08,0.92,0.95,0.08,0.92",
+        filterType: String = "MAGIC"
     ): Int {
         val page = DocumentPage(
             documentId = documentId,
             pageNumber = pageNum,
             imagePresetName = preset,
             ocrText = ocrText,
-            cropCorners = corners
+            cropCorners = corners,
+            filterType = filterType
         )
         return documentDao.insertPage(page).toInt()
     }
